@@ -22,38 +22,27 @@
           <h1 id="page-title">HEIC 转 JPEG</h1>
         </div>
 
-        <div class="workspace">
-          <label class="dropzone" id="dropzone" for="file-input" tabindex="0">
-            <input id="file-input" type="file" accept=".heic,.heif,.jpg,.jpeg,image/heic,image/heif,image/jpeg" multiple />
-            <span class="upload-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            <span class="drop-title">选择 HEIC 照片</span>
-            <span class="browse-pill">选择照片</span>
-            <span class="file-hint">也可以将照片拖放到此处</span>
-          </label>
-
-          <div class="file-list" id="file-list" role="list" hidden></div>
-          <div class="message" id="message" role="status" aria-live="polite" hidden></div>
-          <div class="quality-control" id="quality-control">
-            <div class="quality-heading">
-              <span>照片质量</span>
-            </div>
-            <div class="quality-segments" id="quality-slider" role="radiogroup" aria-label="转换后照片质量">
-              <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="0">低</button>
-              <button type="button" role="radio" aria-checked="true" tabindex="0" data-quality="1" class="is-selected">默认</button>
-              <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="2">高</button>
-            </div>
+        <input id="file-input" type="file" accept=".heic,.heif,.jpg,.jpeg,image/heic,image/heif,image/jpeg" multiple />
+        <div class="file-list" id="file-list" role="list" hidden></div>
+        <div class="message" id="message" role="status" aria-live="polite" hidden></div>
+        <div class="quality-control" id="quality-control">
+          <div class="quality-heading">
+            <span>照片质量</span>
           </div>
-          <button class="convert-button" id="convert-button" type="button" disabled>
-            <span class="spinner" aria-hidden="true"></span>
-            <span id="button-label">转换为 JPEG</span>
-            <svg class="button-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11m0 0-4.5-4.5M15 10l-4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <button class="reset-button" id="reset-button" type="button" hidden>清空并重新选择</button>
+          <div class="quality-segments" id="quality-slider" role="radiogroup" aria-label="转换后照片质量">
+            <span class="quality-thumb" aria-hidden="true"></span>
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="0">低</button>
+            <button type="button" role="radio" aria-checked="true" tabindex="0" data-quality="1" class="is-selected">默认</button>
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="2">高</button>
+          </div>
         </div>
-        <p class="footnote">转换在你的设备上完成，照片不会上传到服务器。</p>
+        <button class="convert-button" id="convert-button" type="button" disabled>
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="button-label">选择照片</span>
+        </button>
+        <button class="reset-button" id="reset-button" type="button" hidden>清空并重新选择</button>
       </section>
+      <p class="footnote">转换在你的设备上完成，照片不会上传到服务器。</p>
     </main>
     <script type="module" src="./src/main.js"></script>
   </body>

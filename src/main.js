@@ -1,5 +1,5 @@
 const input = document.querySelector('#file-input');
-const dropzone = document.querySelector('#dropzone');
+const converter = document.querySelector('.converter');
 const fileList = document.querySelector('#file-list');
 const convertButton = document.querySelector('#convert-button');
 const buttonLabel = document.querySelector('#button-label');
@@ -7,6 +7,7 @@ const message = document.querySelector('#message');
 const resetButton = document.querySelector('#reset-button');
 const qualitySlider = document.querySelector('#quality-slider');
 const qualityControl = document.querySelector('#quality-control');
+const qualityThumb = qualitySlider.querySelector('.quality-thumb');
 
 const MAX_FILES = 5;
 let selectedQuality = 1;
@@ -33,6 +34,17 @@ function downloadFile(item) {
 function isSupportedPhoto(file) {
   return /\.(heic|heif|jpe?g)$/i.test(file.name)
     || /image\/(heic|heif|jpeg)/i.test(file.type);
+}
+
+function shortenFileName(fileName, maxLength = 25) {
+  const characters = Array.from(fileName);
+  if (characters.length <= maxLength) return fileName;
+
+  const extensionMatch = fileName.match(/(\.[^.]+)$/);
+  const extension = extensionMatch?.[0] ?? '';
+  const stem = extension ? fileName.slice(0, -extension.length) : fileName;
+  const visibleStemLength = Math.max(1, maxLength - Array.from(extension).length - 1);
+  return `${Array.from(stem).slice(0, visibleStemLength).join('')}…${extension}`;
 }
 
 async function convertWithBrowserDecoder(file, quality) {
@@ -91,16 +103,25 @@ function setQuality(index) {
     option.tabIndex = selected ? 0 : -1;
     option.classList.toggle('is-selected', selected);
   });
+  positionQualityThumb();
+}
+
+function positionQualityThumb() {
+  if (qualityControl.hidden) return;
+  const options = [...qualitySlider.querySelectorAll('[data-quality]')];
+  const offset = options[selectedQuality].offsetLeft - options[0].offsetLeft;
+  qualityThumb.style.transform = `translateX(${offset}px)`;
 }
 
 function updateControls() {
   const pendingCount = selectedFiles.filter((item) => item.status !== 'done').length;
   const completedCount = selectedFiles.filter((item) => item.status === 'done').length;
+  converter.classList.toggle('has-files', selectedFiles.length > 0);
   fileList.hidden = selectedFiles.length === 0;
-  dropzone.hidden = selectedFiles.length > 0;
-  qualityControl.hidden = selectedFiles.length > 0 && pendingCount === 0;
+  qualityControl.hidden = selectedFiles.length === 0 || pendingCount === 0;
+  if (!qualityControl.hidden) requestAnimationFrame(positionQualityThumb);
   convertButton.hidden = false;
-  convertButton.disabled = selectedFiles.length === 0 || isConverting || isDownloading;
+  convertButton.disabled = isConverting || isDownloading;
   resetButton.hidden = selectedFiles.length === 0 || isConverting;
 
   if (isConverting) {
@@ -109,6 +130,8 @@ function updateControls() {
     buttonLabel.textContent = pendingCount === selectedFiles.length
       ? `转换 ${selectedFiles.length} 张照片`
       : `转换剩余 ${pendingCount} 张`;
+  } else if (selectedFiles.length === 0) {
+    buttonLabel.textContent = '选择照片';
   } else if (completedCount > 0 && isDownloading) {
     buttonLabel.textContent = '正在准备下载…';
   } else if (completedCount > 0) {
@@ -129,7 +152,7 @@ function renderFiles() {
     info.className = 'file-info';
     const name = document.createElement('span');
     name.className = 'file-name';
-    name.textContent = item.file.name;
+    name.textContent = shortenFileName(item.file.name);
     name.title = item.file.name;
     const status = document.createElement('span');
     status.className = `file-status ${item.status}`;
@@ -241,27 +264,7 @@ qualitySlider.addEventListener('click', (event) => {
   const option = event.target.closest('[data-quality]');
   if (option) setQuality(Number(option.dataset.quality));
 });
-
-dropzone.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    input.click();
-  }
-});
-
-for (const eventName of ['dragenter', 'dragover']) {
-  dropzone.addEventListener(eventName, (event) => {
-    event.preventDefault();
-    dropzone.classList.add('is-dragging');
-  });
-}
-for (const eventName of ['dragleave', 'drop']) {
-  dropzone.addEventListener(eventName, (event) => {
-    event.preventDefault();
-    dropzone.classList.remove('is-dragging');
-  });
-}
-dropzone.addEventListener('drop', (event) => addFiles(event.dataTransfer?.files ?? []));
+window.addEventListener('resize', positionQualityThumb);
 
 async function downloadCompletedFiles() {
   const completedFiles = selectedFiles.filter((item) => item.status === 'done');
@@ -283,6 +286,10 @@ async function downloadCompletedFiles() {
 
 convertButton.addEventListener('click', async () => {
   if (isConverting || isDownloading) return;
+  if (selectedFiles.length === 0) {
+    input.click();
+    return;
+  }
   if (!selectedFiles.some((item) => item.status !== 'done')) {
     await downloadCompletedFiles();
     return;
