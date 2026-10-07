@@ -1,3 +1,7 @@
+import { applyTranslations, countPhotos, formatDownloads, formatFiles, t } from './i18n.js';
+
+applyTranslations();
+
 const input = document.querySelector('#file-input');
 const converter = document.querySelector('.converter');
 const fileList = document.querySelector('#file-list');
@@ -11,11 +15,7 @@ const qualityThumb = qualitySlider.querySelector('.quality-thumb');
 
 const MAX_FILES = 5;
 let selectedQuality = 1;
-const QUALITY_LEVELS = [
-  { label: '低', quality: 0.65 },
-  { label: '默认', quality: 0.92 },
-  { label: '高', quality: 0.98 },
-];
+const QUALITY_LEVELS = [0.65, 0.92, 0.98];
 let selectedFiles = [];
 let isConverting = false;
 let isDownloading = false;
@@ -53,7 +53,7 @@ async function convertWithBrowserDecoder(file, quality) {
     const image = new Image();
     await new Promise((resolve, reject) => {
       image.onload = resolve;
-      image.onerror = () => reject(new Error('此浏览器无法直接解码该 HEIC 照片'));
+      image.onerror = () => reject(new Error(t('cannotDecode')));
       image.src = sourceUrl;
     });
 
@@ -62,11 +62,11 @@ async function convertWithBrowserDecoder(file, quality) {
     canvas.height = image.naturalHeight;
     const context = canvas.getContext('2d');
     if (!context || !canvas.width || !canvas.height) {
-      throw new Error('无法读取照片像素');
+      throw new Error(t('cannotReadPixels'));
     }
     context.drawImage(image, 0, 0);
     return await new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('浏览器无法生成 JPEG 图片')), 'image/jpeg', quality);
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error(t('cannotCreateJpeg'))), 'image/jpeg', quality);
     });
   } finally {
     URL.revokeObjectURL(sourceUrl);
@@ -83,7 +83,7 @@ async function convertHeicToJpeg(file, quality) {
     } catch (decoderError) {
       const detail = decoderError instanceof Error ? decoderError.message : String(decoderError);
       const nativeDetail = nativeError instanceof Error ? nativeError.message : String(nativeError);
-      throw new Error(`${detail}（浏览器解码：${nativeDetail}）`);
+      throw new Error(t('decoderError', { detail, nativeDetail }));
     }
   }
 }
@@ -125,19 +125,19 @@ function updateControls() {
   resetButton.hidden = selectedFiles.length === 0 || isConverting;
 
   if (isConverting) {
-    buttonLabel.textContent = `正在转换 ${currentFileIndex} / ${selectedFiles.length}…`;
+    buttonLabel.textContent = t('converting', { current: currentFileIndex, total: selectedFiles.length });
   } else if (pendingCount > 0 && selectedFiles.length > 0) {
     buttonLabel.textContent = pendingCount === selectedFiles.length
-      ? `转换 ${selectedFiles.length} 张照片`
-      : `转换剩余 ${pendingCount} 张`;
+      ? t('convertCount', { count: selectedFiles.length, photos: countPhotos(selectedFiles.length) })
+      : t('convertRemaining', { count: pendingCount, photos: countPhotos(pendingCount) });
   } else if (selectedFiles.length === 0) {
-    buttonLabel.textContent = '选择照片';
+    buttonLabel.textContent = t('choosePhotos');
   } else if (completedCount > 0 && isDownloading) {
-    buttonLabel.textContent = '正在准备下载…';
+    buttonLabel.textContent = t('preparingDownload');
   } else if (completedCount > 0) {
-    buttonLabel.textContent = '下载 JPEG';
+    buttonLabel.textContent = t('downloadJpeg');
   } else {
-    buttonLabel.textContent = '转换为 JPEG';
+    buttonLabel.textContent = t('pageTitle');
   }
 }
 
@@ -156,9 +156,9 @@ function renderFiles() {
     name.title = item.file.name;
     const status = document.createElement('span');
     status.className = `file-status ${item.status}`;
-    status.textContent = item.status === 'processing' ? '正在转换…'
-      : item.status === 'done' ? '转换完成'
-        : item.status === 'error' ? '转换失败，可重试' : '等待转换';
+    status.textContent = item.status === 'processing' ? t('processing')
+      : item.status === 'done' ? t('converted')
+        : item.status === 'error' ? t('failed') : t('waiting');
     info.append(name, status);
 
     row.append(info);
@@ -167,7 +167,7 @@ function renderFiles() {
       download.className = 'file-download';
       download.href = item.outputUrl;
       download.download = item.outputName;
-      download.textContent = '下载 JPEG';
+      download.textContent = t('downloadJpeg');
       row.append(download);
     } else {
       const remove = document.createElement('button');
@@ -175,8 +175,8 @@ function renderFiles() {
       remove.type = 'button';
       remove.dataset.fileId = item.id;
       remove.disabled = isConverting;
-      remove.setAttribute('aria-label', `移除 ${item.file.name}`);
-      remove.title = '移除照片';
+      remove.setAttribute('aria-label', t('removePhoto', { name: item.file.name }));
+      remove.title = t('removePhoto', { name: item.file.name });
       remove.textContent = '×';
       row.append(remove);
     }
@@ -187,7 +187,7 @@ function renderFiles() {
 
 function addFiles(files) {
   if (isConverting) {
-    showMessage('转换完成后才能继续添加照片。', 'error');
+    showMessage(t('cannotAddWhileConverting'), 'error');
     return;
   }
 
@@ -228,11 +228,11 @@ function addFiles(files) {
   renderFiles();
   if (invalidCount || duplicateCount || limitCount) {
     const notes = [];
-    if (addedCount) notes.push(`已添加 ${addedCount} 张`);
-    if (invalidCount) notes.push(`忽略 ${invalidCount} 个不支持的文件`);
-    if (duplicateCount) notes.push(`忽略 ${duplicateCount} 个重复文件`);
-    if (limitCount) notes.push(`最多选择 ${MAX_FILES} 张，超出部分未添加`);
-    showMessage(notes.join('；') + '。', limitCount || invalidCount ? 'error' : 'info');
+    if (addedCount) notes.push(t('added', { count: addedCount, photos: countPhotos(addedCount) }));
+    if (invalidCount) notes.push(t('unsupported', { count: invalidCount, files: formatFiles(invalidCount, 'unsupported') }));
+    if (duplicateCount) notes.push(t('duplicates', { count: duplicateCount, files: formatFiles(duplicateCount, 'duplicate') }));
+    if (limitCount) notes.push(t('maxExceeded', { max: MAX_FILES }));
+    showMessage(notes.join(t('noticeSeparator')) + t('noticeEnd'), limitCount || invalidCount ? 'error' : 'info');
   } else if (addedCount) {
     message.hidden = true;
   }
@@ -281,7 +281,7 @@ async function downloadCompletedFiles() {
   }
   isDownloading = false;
   renderFiles();
-  showMessage(`已发起 ${completedFiles.length} 个 JPEG 下载，请按浏览器提示保存。`, 'success');
+  showMessage(t('downloadStarted', { count: completedFiles.length, downloads: formatDownloads(completedFiles.length) }), 'success');
 }
 
 convertButton.addEventListener('click', async () => {
@@ -301,7 +301,7 @@ convertButton.addEventListener('click', async () => {
   const pendingFiles = selectedFiles.filter((item) => item.status !== 'done');
   let completedCount = selectedFiles.filter((item) => item.status === 'done').length;
   let failedCount = 0;
-  const quality = QUALITY_LEVELS[selectedQuality].quality;
+  const quality = QUALITY_LEVELS[selectedQuality];
 
   for (let index = 0; index < pendingFiles.length; index += 1) {
     const item = pendingFiles[index];
@@ -325,9 +325,9 @@ convertButton.addEventListener('click', async () => {
   convertButton.classList.remove('is-loading');
   renderFiles();
   if (failedCount) {
-    showMessage(`已完成 ${completedCount} 张，${failedCount} 张失败；可以重试失败的照片。`, 'error');
+    showMessage(t('conversionPartial', { done: completedCount, failed: failedCount, donePhotos: countPhotos(completedCount), failedPhotos: countPhotos(failedCount) }), 'error');
   } else {
-    showMessage(`已完成 ${completedCount} 张，点击下方按钮下载 JPEG。`, 'success');
+    showMessage(t('conversionSuccess', { count: completedCount, photos: countPhotos(completedCount) }), 'success');
   }
 });
 

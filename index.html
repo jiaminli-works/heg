@@ -4,22 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f7f5f0" />
-    <meta name="description" content="在浏览器中快速将 iPhone HEIC 照片转换为 JPEG。" />
+    <meta name="description" content="在浏览器中快速将 iPhone HEIC 照片转换为 JPEG。" data-i18n="pageDescription" data-i18n-attr="content" />
     <title>heg · HEIC 转 JPEG</title>
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
     <main class="page-shell">
       <header class="topbar">
-        <a class="brand" href="/" aria-label="heg 首页">
+        <a class="brand" href="/" aria-label="heg 首页" data-i18n="brandAria" data-i18n-attr="aria-label">
           <span>heg</span>
         </a>
       </header>
 
       <section class="converter" aria-labelledby="page-title">
         <div class="intro">
-          <span class="eyebrow">为 iPhone 照片准备</span>
-          <h1 id="page-title">HEIC 转 JPEG</h1>
+          <span class="eyebrow" data-i18n="eyebrow">为 iPhone 照片准备</span>
+          <h1 id="page-title" data-i18n="pageTitle">HEIC 转 JPEG</h1>
         </div>
 
         <input id="file-input" type="file" accept=".heic,.heif,.jpg,.jpeg,image/heic,image/heif,image/jpeg" multiple />
@@ -27,22 +27,22 @@
         <div class="message" id="message" role="status" aria-live="polite" hidden></div>
         <div class="quality-control" id="quality-control">
           <div class="quality-heading">
-            <span>照片质量</span>
+            <span data-i18n="quality">照片质量</span>
           </div>
-          <div class="quality-segments" id="quality-slider" role="radiogroup" aria-label="转换后照片质量">
+          <div class="quality-segments" id="quality-slider" role="radiogroup" aria-label="转换后照片质量" data-i18n="qualityLabel" data-i18n-attr="aria-label">
             <span class="quality-thumb" aria-hidden="true"></span>
-            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="0">低</button>
-            <button type="button" role="radio" aria-checked="true" tabindex="0" data-quality="1" class="is-selected">默认</button>
-            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="2">高</button>
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="0" data-i18n="qualityLow">低</button>
+            <button type="button" role="radio" aria-checked="true" tabindex="0" data-quality="1" class="is-selected" data-i18n="qualityDefault">默认</button>
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-quality="2" data-i18n="qualityHigh">高</button>
           </div>
         </div>
         <button class="convert-button" id="convert-button" type="button" disabled>
           <span class="spinner" aria-hidden="true"></span>
           <span id="button-label">选择照片</span>
         </button>
-        <button class="reset-button" id="reset-button" type="button" hidden>清空并重新选择</button>
+        <button class="reset-button" id="reset-button" type="button" hidden data-i18n="reset">清空并重新选择</button>
       </section>
-      <p class="footnote">转换在你的设备上完成，照片不会上传到服务器。</p>
+      <p class="footnote" data-i18n="footnote">转换在你的设备上完成，照片不会上传到服务器。</p>
     </main>
     <script type="module" src="./src/main.js"></script>
   </body>

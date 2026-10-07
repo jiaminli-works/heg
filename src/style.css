@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+  --font-family: 'Iowan Old Style', 'Baskerville', Georgia, serif;
   --md-primary: #b65336;
   --md-on-primary: #ffffff;
   --md-primary-container: #f1dfd5;
@@ -17,7 +18,7 @@
   --md-on-surface-variant: #686158;
   --md-success: #4d6a50;
   --md-error: #a54132;
-  font-family: 'Iowan Old Style', 'Baskerville', 'Songti SC', 'Noto Serif CJK SC', Georgia, serif;
+  font-family: var(--font-family);
   color: var(--md-on-surface);
   background: var(--md-background);
   font-synthesis: none;
@@ -26,6 +27,12 @@
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
 }
+
+html[lang="zh-CN"] { --font-family: 'Iowan Old Style', 'Baskerville', 'Songti SC', 'Noto Serif CJK SC', Georgia, serif; }
+html[lang="zh-Hant"] { --font-family: 'Iowan Old Style', 'Baskerville', 'Songti TC', 'Noto Serif CJK TC', 'PMingLiU', Georgia, serif; }
+html[lang="ja"] { --font-family: 'Iowan Old Style', 'Baskerville', 'Yu Mincho', 'Hiragino Mincho ProN', 'Noto Serif JP', Georgia, serif; }
+html[lang="ko"] { --font-family: 'Iowan Old Style', 'Baskerville', 'AppleMyungjo', 'Noto Serif KR', Georgia, serif; }
+html[lang="en"] { --font-family: 'Iowan Old Style', 'Baskerville', Georgia, serif; }
 
 * { box-sizing: border-box; }
 html { min-height: 100%; }
@@ -36,7 +43,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d69a7d; outline-offs
 
 .page-shell { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; padding: 0 clamp(20px, 7.2vw, 112px); }
 .topbar { height: 76px; flex: 0 0 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e6e1d8; }
-.brand { display: inline-flex; align-items: center; color: var(--md-on-surface); text-decoration: none; font-family: 'Iowan Old Style', 'Baskerville', 'Songti SC', 'Noto Serif CJK SC', Georgia, serif; font-size: 25px; font-weight: 500; letter-spacing: -.7px; }
+.brand { display: inline-flex; align-items: center; color: var(--md-on-surface); text-decoration: none; font-size: 25px; font-weight: 500; letter-spacing: -.7px; }
 .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 16px; background: var(--md-primary); color: var(--md-on-primary); font-size: 17px; font-weight: 700; box-shadow: none; }
 .privacy-note { display: inline-flex; align-items: center; gap: 8px; color: var(--md-on-surface-variant); font-size: 12px; }
 .privacy-note svg { width: 17px; height: 17px; color: var(--md-primary); }
@@ -44,7 +51,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d69a7d; outline-offs
 .intro { position: relative; padding-left: 18px; text-align: left; margin-bottom: 29px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 12px; color: var(--md-primary); font-size: 12px; font-weight: 650; letter-spacing: .2px; }
 .eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: #5b79ad; }
-h1 { margin: 0; color: var(--md-on-surface); font-family: 'Iowan Old Style', 'Baskerville', 'Songti SC', 'Noto Serif CJK SC', Georgia, serif; font-size: clamp(34px, 5vw, 43px); line-height: 1.2; font-weight: 500; letter-spacing: -.8px; }
+h1 { margin: 0; color: var(--md-on-surface); font-size: clamp(34px, 5vw, 43px); line-height: 1.2; font-weight: 500; letter-spacing: -.8px; }
 .intro p { margin: 11px 0 0; color: var(--md-on-surface-variant); font-size: 14px; line-height: 1.6; }
 #file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .file-list { display: grid; gap: 8px; margin-top: 0; }
