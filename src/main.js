@@ -73,7 +73,7 @@ async function convertWithBrowserDecoder(file, quality) {
   }
 }
 
-async function convertHeicToJpeg(file, quality) {
+async function convertHeifToJpeg(file, quality) {
   try {
     return await convertWithBrowserDecoder(file, quality);
   } catch (nativeError) {
@@ -309,13 +309,13 @@ convertButton.addEventListener('click', async () => {
     item.status = 'processing';
     renderFiles();
     try {
-      const jpgBlob = await convertHeicToJpeg(item.file, quality);
+      const jpgBlob = await convertHeifToJpeg(item.file, quality);
       item.outputUrl = URL.createObjectURL(jpgBlob);
       item.outputName = `${item.file.name.replace(/\.(heic|heif|jpe?g)$/i, '') || 'photo'}.jpeg`;
       item.status = 'done';
       completedCount += 1;
     } catch (error) {
-      console.error(`HEIC conversion failed for ${item.file.name}:`, error);
+      console.error(`HEIF conversion failed for ${item.file.name}:`, error);
       item.status = 'error';
       failedCount += 1;
     }

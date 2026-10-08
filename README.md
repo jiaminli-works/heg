@@ -1,6 +1,6 @@
-# HEIC 转 JPG
+# HEIF 转 JPEG
 
-在浏览器本地将 iPhone 的 HEIC/HEIF 照片转换为 JPG。照片不会上传到服务器。
+在浏览器本地将 iPhone 的 HEIF 照片转换为 JPEG。照片不会上传到服务器。
 
 ## 本地运行
 
