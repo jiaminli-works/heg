@@ -15,11 +15,21 @@ const qualityThumb = qualitySlider.querySelector('.quality-thumb');
 
 const MAX_FILES = 5;
 let selectedQuality = 1;
-const QUALITY_LEVELS = [0.65, 0.92, 0.98];
+const QUALITY_LEVELS = [0.5, 0.8, 1];
 let selectedFiles = [];
 let isConverting = false;
 let isDownloading = false;
 let currentFileIndex = 0;
+let archiveUrl = null;
+
+const crcTable = new Uint32Array(256);
+for (let index = 0; index < crcTable.length; index += 1) {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  crcTable[index] = value >>> 0;
+}
 
 function downloadFile(item) {
   const link = document.createElement('a');
@@ -29,6 +39,83 @@ function downloadFile(item) {
   document.body.append(link);
   link.click();
   link.remove();
+}
+
+async function crc32(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let value = 0xffffffff;
+  for (const byte of bytes) value = crcTable[(value ^ byte) & 0xff] ^ (value >>> 8);
+  return (value ^ 0xffffffff) >>> 0;
+}
+
+async function createZipBlob(files) {
+  const encoder = new TextEncoder();
+  const parts = [];
+  const centralDirectory = [];
+  let localOffset = 0;
+  let centralSize = 0;
+
+  for (const item of files) {
+    const fileBlob = item.outputBlob;
+    const fileSize = fileBlob.size;
+    const filename = encoder.encode(item.outputName);
+    if (fileSize > 0xffffffff || filename.length > 0xffff) {
+      throw new Error('File is too large for a standard ZIP archive.');
+    }
+    const checksum = await crc32(fileBlob);
+    const localHeader = new Uint8Array(30 + filename.length);
+    const localView = new DataView(localHeader.buffer);
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0x0800, true);
+    localView.setUint16(8, 0, true);
+    localView.setUint16(10, 0, true);
+    localView.setUint16(12, 0x21, true);
+    localView.setUint32(14, checksum, true);
+    localView.setUint32(18, fileSize, true);
+    localView.setUint32(22, fileSize, true);
+    localView.setUint16(26, filename.length, true);
+    localView.setUint16(28, 0, true);
+    localHeader.set(filename, 30);
+    parts.push(localHeader, fileBlob);
+
+    const centralHeader = new Uint8Array(46 + filename.length);
+    const centralView = new DataView(centralHeader.buffer);
+    centralView.setUint32(0, 0x02014b50, true);
+    centralView.setUint16(4, 20, true);
+    centralView.setUint16(6, 20, true);
+    centralView.setUint16(8, 0x0800, true);
+    centralView.setUint16(10, 0, true);
+    centralView.setUint16(12, 0, true);
+    centralView.setUint16(14, 0x21, true);
+    centralView.setUint32(16, checksum, true);
+    centralView.setUint32(20, fileSize, true);
+    centralView.setUint32(24, fileSize, true);
+    centralView.setUint16(28, filename.length, true);
+    centralView.setUint16(30, 0, true);
+    centralView.setUint16(32, 0, true);
+    centralView.setUint16(34, 0, true);
+    centralView.setUint16(36, 0, true);
+    centralView.setUint32(38, 0, true);
+    centralView.setUint32(42, localOffset, true);
+    centralHeader.set(filename, 46);
+    centralDirectory.push(centralHeader);
+
+    localOffset += localHeader.length + fileSize;
+    centralSize += centralHeader.length;
+  }
+
+  const endRecord = new Uint8Array(22);
+  const endView = new DataView(endRecord.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(4, 0, true);
+  endView.setUint16(6, 0, true);
+  endView.setUint16(8, files.length, true);
+  endView.setUint16(10, files.length, true);
+  endView.setUint32(12, centralSize, true);
+  endView.setUint32(16, localOffset, true);
+  endView.setUint16(20, 0, true);
+  return new Blob([...parts, ...centralDirectory, endRecord], { type: 'application/zip' });
 }
 
 function isSupportedPhoto(file) {
@@ -122,7 +209,7 @@ function updateControls() {
   if (!qualityControl.hidden) requestAnimationFrame(positionQualityThumb);
   convertButton.hidden = false;
   convertButton.disabled = isConverting || isDownloading;
-  resetButton.hidden = selectedFiles.length === 0 || isConverting;
+  resetButton.hidden = selectedFiles.length === 0 || isConverting || isDownloading;
 
   if (isConverting) {
     buttonLabel.textContent = t('converting', { current: currentFileIndex, total: selectedFiles.length });
@@ -145,15 +232,27 @@ function renderFiles() {
   fileList.replaceChildren();
   for (const item of selectedFiles) {
     const row = document.createElement('div');
-    row.className = 'file-row';
+    row.className = `file-row${item.status === 'done' ? ' has-preview' : ''}`;
     row.setAttribute('role', 'listitem');
+
+    if (item.status === 'done') {
+      const preview = document.createElement('img');
+      preview.className = 'file-preview';
+      preview.src = item.outputUrl;
+      preview.alt = t('previewPhoto', { name: item.file.name });
+      preview.loading = 'lazy';
+      preview.decoding = 'async';
+      preview.draggable = false;
+      row.append(preview);
+    }
 
     const info = document.createElement('div');
     info.className = 'file-info';
     const name = document.createElement('span');
     name.className = 'file-name';
-    name.textContent = shortenFileName(item.file.name);
-    name.title = item.file.name;
+    const displayName = item.status === 'done' ? item.file.name.replace(/\.[^.]+$/, '') : item.file.name;
+    name.textContent = shortenFileName(displayName);
+    name.title = displayName;
     const status = document.createElement('span');
     status.className = `file-status ${item.status}`;
     status.textContent = item.status === 'processing' ? t('processing')
@@ -162,14 +261,7 @@ function renderFiles() {
     info.append(name, status);
 
     row.append(info);
-    if (item.status === 'done') {
-      const download = document.createElement('a');
-      download.className = 'file-download';
-      download.href = item.outputUrl;
-      download.download = item.outputName;
-      download.textContent = t('downloadJpeg');
-      row.append(download);
-    } else {
+    if (item.status !== 'done') {
       const remove = document.createElement('button');
       remove.className = 'remove-button';
       remove.type = 'button';
@@ -219,6 +311,7 @@ function addFiles(files) {
       file,
       status: 'ready',
       outputUrl: null,
+      outputBlob: null,
       outputName: null,
     });
     addedCount += 1;
@@ -239,10 +332,12 @@ function addFiles(files) {
 }
 
 function reset() {
-  if (isConverting) return;
+  if (isConverting || isDownloading) return;
   for (const item of selectedFiles) {
     if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
   }
+  if (archiveUrl) URL.revokeObjectURL(archiveUrl);
+  archiveUrl = null;
   selectedFiles = [];
   input.value = '';
   message.hidden = true;
@@ -272,16 +367,21 @@ async function downloadCompletedFiles() {
 
   isDownloading = true;
   renderFiles();
-  for (let index = 0; index < completedFiles.length; index += 1) {
-    const item = completedFiles[index];
-    downloadFile(item);
-    if (index < completedFiles.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 900));
-    }
+  if (completedFiles.length === 1) {
+    downloadFile(completedFiles[0]);
+  } else if (archiveUrl) {
+    downloadFile({ outputUrl: archiveUrl, outputName: 'heg-photos.zip' });
+  } else {
+    isDownloading = false;
+    renderFiles();
+    showMessage(t('zipError'), 'error');
+    return;
   }
   isDownloading = false;
   renderFiles();
-  showMessage(t('downloadStarted', { count: completedFiles.length, downloads: formatDownloads(completedFiles.length) }), 'success');
+  showMessage(completedFiles.length === 1
+    ? t('downloadStarted', { count: completedFiles.length, downloads: formatDownloads(completedFiles.length) })
+    : t('downloadStartedZip', { count: completedFiles.length }), 'success');
 }
 
 convertButton.addEventListener('click', async () => {
@@ -310,6 +410,7 @@ convertButton.addEventListener('click', async () => {
     renderFiles();
     try {
       const jpgBlob = await convertHeifToJpeg(item.file, quality);
+      item.outputBlob = jpgBlob;
       item.outputUrl = URL.createObjectURL(jpgBlob);
       item.outputName = `${item.file.name.replace(/\.(heic|heif|jpe?g)$/i, '') || 'photo'}.jpeg`;
       item.status = 'done';
@@ -323,6 +424,23 @@ convertButton.addEventListener('click', async () => {
 
   isConverting = false;
   convertButton.classList.remove('is-loading');
+  renderFiles();
+  const completedFiles = selectedFiles.filter((item) => item.status === 'done');
+  if (completedFiles.length >= 2) {
+    isDownloading = true;
+    renderFiles();
+    try {
+      const archiveBlob = await createZipBlob(completedFiles);
+      const nextArchiveUrl = URL.createObjectURL(archiveBlob);
+      if (archiveUrl) URL.revokeObjectURL(archiveUrl);
+      archiveUrl = nextArchiveUrl;
+    } catch (error) {
+      console.error('Could not create ZIP archive:', error);
+      if (archiveUrl) URL.revokeObjectURL(archiveUrl);
+      archiveUrl = null;
+    }
+    isDownloading = false;
+  }
   renderFiles();
   if (failedCount) {
     showMessage(t('conversionPartial', { done: completedCount, failed: failedCount, donePhotos: countPhotos(completedCount), failedPhotos: countPhotos(failedCount) }), 'error');
